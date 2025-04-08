@@ -70,28 +70,49 @@
 #define SW_Red      BIT3
 #define SW_Yellow   BIT4
 #define SW_Green    BIT5
+#define Motor       BIT6
 
 void main (void)
 {
     WDTCTL = WDTPW | WDTHOLD;           // Watchdog Password and Hold for dubug mode
-    TACTL = MC_2|ID_3 |TASSEL_2|TACLR;  //Continuous up mode , divide clock by 8, clock from SMCLK , clear timer
+    TACTL = MC_2|ID_3 |TASSEL_2|TACLR;  // Start with low speed, Continuous up mode , divide clock by 8, clock from SMCLK , clear timer
 
     P1DIR  = 0b00000111;    // BIT0-2 = OUTPUT, BIT3-5 = INPUT
     P1REN |= 0b00111000;    // Internal pull resisters for switch
     P1OUT |= 0b00111000;    // Select Pull-up 
     P1OUT |= 0b00000111;     // OFF all LEDs (active low) 
-    while (1) {
-    
+
+    while (1) {    
         if ((TACTL&TAIFG) == 1)  //Timer overflow
         {   
             TACTL &= ~TAIFG;    //Reset overflow flag (TAIFG = 11111110B)
-            P1OUT ^=LED_Red;    //Toggle red LED by timer
-        }       
+            P1OUT ^= Motor;    //Toggle red LED by timer
+        }               
+        Switch_check ();        
+    }
+}
 
+void Switch_check (void)
+{             
+        if (SW_Red == 0)
+        {
+            while (SW_Red == 0);
+            TACTL = MC_2|ID_3 |TASSEL_2|TACLR;   //FAST SPEED
+            P1OUT |= 0b00000111; //OFF all LEDs       
+            P1OUT &= 0b11111110; //On LED red (Active Low)
+        }
         if (SW_Yellow == 0)    //SW Yellow Push
         {
             while (SW_Yellow == 0);  //Wait SW Release 
-            P1OUT ^= LED_Yellow;     // Toggle LED Yellow
+            TACTL = MC_2|ID_2 |TASSEL_2|TACLR;     //MIDDLE SPEED
+            P1OUT |= 0b00000111; //OFF all LEDs 
+            P1OUT &= 0b11111101; //On LED Yellow (Active Low)           
         }
-    }
+        if (SW_Green == 0)
+        {
+            while (SW_Green == 0);
+            TACTL = MC_2|ID_1 |TASSEL_2|TACLR;   //LOW SPEED
+            P1OUT |= 0b00000111; //OFF all LEDs 
+            P1OUT &= 0b11111011; //On LED Green (Active Low)   
+        }       
 }
