@@ -63,30 +63,35 @@
 //******************************************************************************
 
 #include <msp430.h>
-#define LED_Red     BIT0
-#define LED_Yellow  BIT1
-#define LED_Green   BIT2
+
+#define LED_Red     0b00000001
+#define LED_Yellow  0b00000010
+#define LED_Green   0b00000100
 #define SW_Red      BIT3
 #define SW_Yellow   BIT4
 #define SW_Green    BIT5
 
 void main (void)
 {
-    P1DIR  = 0x00000111;    // BIT0-2 = OUTPUT, BIT3-5 = INPUT
-    P1REN |= 0x00111000;    // Resistors pull up for switch
-    P1OUT |= 0x00111000;    // Select Pull-up Resistors
-    P1OUT = 0x00000111;     // OFF all LEDs (active low) 
+    WDTCTL = WDTPW | WDTHOLD;           // Watchdog Password and Hold for dubug mode
+    TACTL = MC_2|ID_3 |TASSEL_2|TACLR;  //Continuous up mode , divide clock by 8, clock from SMCLK , clear timer
 
-    if (SW_Red == 0)
-    {
-        P1OUT &= ~LED_Red;     
-    }
-    else if (SW_Yellow == 0)
-    {
-        P1OUT &= ~LED_Yellow; 
-    }
-    else if (SW_Green == 0)
-    {
-        P1OUT &= ~LED_Green;
+    P1DIR  = 0b00000111;    // BIT0-2 = OUTPUT, BIT3-5 = INPUT
+    P1REN |= 0b00111000;    // Internal pull resisters for switch
+    P1OUT |= 0b00111000;    // Select Pull-up 
+    P1OUT |= 0b00000111;     // OFF all LEDs (active low) 
+    while (1) {
+    
+        if ((TACTL&TAIFG) == 1)  //Timer overflow
+        {   
+            TACTL &= ~TAIFG;    //Reset overflow flag (TAIFG = 11111110B)
+            P1OUT ^=LED_Red;    //Toggle red LED by timer
+        }       
+
+        if (SW_Yellow == 0)    //SW Yellow Push
+        {
+            while (SW_Yellow == 0);  //Wait SW Release 
+            P1OUT ^= LED_Yellow;     // Toggle LED Yellow
+        }
     }
 }
